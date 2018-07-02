@@ -5,6 +5,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.lf5.util.StreamUtils;
 
 import java.io.IOException;
@@ -25,6 +26,7 @@ public class HDFSClient {
     public byte[] readAsByteArray(String filePath) throws IOException {
         FSDataInputStream hdfsInStream = fileSystem.open(new Path(filePath));
         byte[] readResult = StreamUtils.getBytes(hdfsInStream);
+//        byte[] readResult = Bytes.toBytes(hdfsInStream);
         hdfsInStream.close();
         return readResult;
     }
