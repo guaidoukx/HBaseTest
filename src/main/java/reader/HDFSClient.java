@@ -9,6 +9,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.lf5.util.StreamUtils;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,6 +30,11 @@ public class HDFSClient {
 //        byte[] readResult = Bytes.toBytes(hdfsInStream);
         hdfsInStream.close();
         return readResult;
+    }
+
+    public InputStream readAsInputStream(String filePath) throws IOException{
+        FSDataInputStream hdfsInStream = fileSystem.open(new Path(filePath));
+        return hdfsInStream;
     }
 
     public List<String> listFileNames(String directoryPath) throws IOException {
