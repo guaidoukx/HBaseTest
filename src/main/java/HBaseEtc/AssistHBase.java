@@ -35,7 +35,7 @@ public class AssistHBase {
         try {
             HBase hBase = new HBase();
             AssistHBase assistHBase = new AssistHBase();
-            HDFSClient hdfsClient = new HDFSClient("hdfs://10.141.209.224:9000");
+            HDFSClient hdfsClient = new HDFSClient();
             InputStream inputStream= hdfsClient.readAsInputStream("hdfs://10.141.209.224:9000/bodyDemo/t6.txt");
             hBase.tableCreate("AssistTable", new String[]{"ID"});
             assistHBase.importStreamData(TableName.valueOf("AssistTable"), inputStream, "ID", 2, new String[]{"id"}, new Integer[]{0}, "=");
