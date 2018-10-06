@@ -1,4 +1,4 @@
-package HBaseEtc;
+package reader;
 
 import java.io.*;
 class DownThread extends Thread {

@@ -1,4 +1,6 @@
-package HBaseEtc;
+package reader;
+
+import reader.DownThread;
 
 import java.io.File;
 import java.io.FileInputStream;

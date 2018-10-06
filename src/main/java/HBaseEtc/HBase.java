@@ -17,12 +17,14 @@ import org.apache.hadoop.fs.FileSystem;
 import java.io.*;
 import java.util.*;
 
+import static java.lang.Math.max;
+
 
 ///HBASE 2.0
 
 public class HBase {
     private static Configuration conf;
-    static Connection connection;
+    private static Connection connection;
     private static Admin admin;
     private static FileSystem fileSystem;
 
@@ -40,9 +42,12 @@ public class HBase {
 
     public static void main(String[] args) {
         try {
-            HBase HBase = new HBase();
+            HBase hBase = new HBase();
             HDFSClient hdfsClient = new HDFSClient();
-            HBase.tableCreate("Demo", new String[]{"Info"});
+            Table phoneEnrollInfoDemo = hBase.getTable("phoneEnrollInfoDemo");
+            System.out.println(hBase.QueryOneInTable(phoneEnrollInfoDemo, "220284197807072146")[1]);
+
+//            HBase.tableCreate("Demo", new String[]{"Info"});
 
 //            byte[] txtArray = hdfsClient.readAsByteArray("hdfs://10.141.209.224:9000/bodyDemo/t6.txt");
 //            HBaseEtc.HBase.importByteArrayData(TableName.valueOf("phoneEnrollInfo"), txtArray,"Info",new String[]{"name", "phoneNum", "phoneState", "ts1", "ts2", "ts3","ts4","ts5", "ts6"},"=");
@@ -256,55 +261,128 @@ public class HBase {
         BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
         String line;
         Long lineCounter = 0L;
-        Long nullPoint =0L;
+//        Long nullPoint =0L;
         // to write
-        Path path = new Path(filePath);
-        FileSystem fs = path.getFileSystem(conf);
-        FSDataOutputStream file = fs.create(path);
+//        Path path = new Path(filePath);
+//        FileSystem fs = path.getFileSystem(conf);
+//        FSDataOutputStream file = fs.create(path);
 
         while((line = bufferedReader.readLine()) != null) {
             String[] lineSplit = line.split(regex);
             lineCounter++;
-            String phoneNum = lineSplit[orderOfPhoneNum-1];
-            String timestamp = lineSplit[orderOfTimestamp-1];
+//            if (lineSplit.length == totalColumns){
+            String phoneNum = lineSplit[orderOfPhoneNum - 1];
+            String timestamp = lineSplit[orderOfTimestamp - 1];
             HBase hBase = new HBase();
             String[] queryResult = hBase.QueryOneInTable(assistTable, phoneNum);
-            if (queryResult == null){
-                System.out.println(lineCounter);
-                System.out.println("nullPoint sum : " + (++nullPoint));
-                // to write
-                file.write(Bytes.toBytes(lineCounter+ " has no result"));
-                file.flush();
-            }else {
-                String id = queryResult[0];
-                Put putID = new Put(Bytes.toBytes(id + "-" + timestamp));
-                Put putTS = new Put(Bytes.toBytes(timestamp + "-" + id));
-                for (Integer i = 1; i <= totalColumns; i++) {
-                    if (!lineSplit[i - 1].equals(" ")) {
-                        if (i < 10) {
-                            putID.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes('f' + "0" + i.toString()), Bytes.toBytes(lineSplit[i - 1]));
-                            putTS.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes('f' + "0" + i.toString()), Bytes.toBytes(lineSplit[i - 1]));
-                        } else {
-                            putID.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes('f' + i.toString()), Bytes.toBytes(lineSplit[i - 1]));
-                            putTS.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes('f' + i.toString()), Bytes.toBytes(lineSplit[i - 1]));
-                        }
+//                if (queryResult == null) {
+//                    System.out.println(lineCounter);
+//                    System.out.println("Wrong format sum : " + (++nullPoint) + " nullPoint. ");
+//                    // to write
+//                    file.write(Bytes.toBytes(lineCounter + " has no result\n"));
+//                    file.flush();
+//                } else {
+            String id = queryResult[0];
+            Put putID = new Put(Bytes.toBytes(id + "-" + timestamp));
+            Put putTS = new Put(Bytes.toBytes(timestamp + "-" + id));
+            for (Integer i = 1; i <= totalColumns; i++) {
+                if (!lineSplit[i - 1].equals(" ")) {
+                    if (i < 10) {
+                        putID.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes('f' + "0" + i.toString()), Bytes.toBytes(lineSplit[i - 1]));
+                        putTS.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes('f' + "0" + i.toString()), Bytes.toBytes(lineSplit[i - 1]));
+                    } else {
+                        putID.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes('f' + i.toString()), Bytes.toBytes(lineSplit[i - 1]));
+                        putTS.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes('f' + i.toString()), Bytes.toBytes(lineSplit[i - 1]));
                     }
                 }
-                tableID.put(putID);
-                tableTS.put(putTS);
-
-                if (lineCounter % 10000 == 0) {
-                    System.out.println(lineCounter);
-                }
             }
+            tableID.put(putID);
+            tableTS.put(putTS);
+//                }
+//            }else {
+//                System.out.println(lineCounter);
+//                System.out.println("Wrong format sum : " + (++nullPoint) + " IndexOutOfBounds. ");
+//                // to write
+//                file.write(Bytes.toBytes(lineCounter + "array index out of bounds\n"));
+//                file.flush();
+//            }
+            if (lineCounter % 5000 == 0) {
+                System.out.println("--==Input "+lineCounter+" lines. ==--");
+            }
+            if(lineCounter >= 100000000)
+                break;
         }
         // to write
-        file.write(Bytes.toBytes("There are "+ lineCounter + "lines ."));
-        file.write(Bytes.toBytes("But there are "+ nullPoint + "lines have no results"));
-        file.close();
+//        file.write(Bytes.toBytes("There are "+ lineCounter + " lines in total.\n"));
+//        file.write(Bytes.toBytes("But there are "+ nullPoint + " lines have format mistake. \n"));
+//        file.close();
         System.out.println("Import data successfully!");
     }
 
+    public void streamDataImport(Table tableID,  InputStream inputStream, String columnFamily, Integer
+            totalColumns, String regex, Integer orderOfPhoneNum, Integer orderOfTimestamp, Table assistTable, String
+                                         filePath) throws Exception {
+        InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+        BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+        String line;
+        Long lineCounter = 0L;
+//        Long nullPoint =0L;
+        // to write
+//        Path path = new Path(filePath);
+//        FileSystem fs = path.getFileSystem(conf);
+//        FSDataOutputStream file = fs.create(path);
+
+        while((line = bufferedReader.readLine()) != null) {
+            String[] lineSplit = line.split(regex);
+            lineCounter++;
+//            if (lineSplit.length == totalColumns){
+            String phoneNum = lineSplit[orderOfPhoneNum - 1];
+            String timestamp = lineSplit[orderOfTimestamp - 1];
+            HBase hBase = new HBase();
+            String[] queryResult = hBase.QueryOneInTable(assistTable, phoneNum);
+//                if (queryResult == null) {
+//                    System.out.println(lineCounter);
+//                    System.out.println("Wrong format sum : " + (++nullPoint) + " nullPoint. ");
+//                    // to write
+//                    file.write(Bytes.toBytes(lineCounter + " has no result\n"));
+//                    file.flush();
+//                } else {
+            String id = queryResult[0];
+            Put putID = new Put(Bytes.toBytes(id + "-" + timestamp));
+//            Put putTS = new Put(Bytes.toBytes(timestamp + "-" + id));
+            for (Integer i = 1; i <= totalColumns; i++) {
+                if (!lineSplit[i - 1].equals(" ")) {
+                    if (i < 10) {
+                        putID.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes('f' + "0" + i.toString()), Bytes.toBytes(lineSplit[i - 1]));
+//                        putTS.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes('f' + "0" + i.toString()), Bytes.toBytes(lineSplit[i - 1]));
+                    } else {
+                        putID.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes('f' + i.toString()), Bytes.toBytes(lineSplit[i - 1]));
+//                        putTS.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes('f' + i.toString()), Bytes.toBytes(lineSplit[i - 1]));
+                    }
+                }
+            }
+            tableID.put(putID);
+//            tableTS.put(putTS);
+//                }
+//            }else {
+//                System.out.println(lineCounter);
+//                System.out.println("Wrong format sum : " + (++nullPoint) + " IndexOutOfBounds. ");
+//                // to write
+//                file.write(Bytes.toBytes(lineCounter + "array index out of bounds\n"));
+//                file.flush();
+//            }
+            if (lineCounter % 5000 == 0) {
+                System.out.println("--==Input "+lineCounter+" lines. ==--");
+            }
+            if(lineCounter >= 100000000)
+                break;
+        }
+        // to write
+//        file.write(Bytes.toBytes("There are "+ lineCounter + " lines in total.\n"));
+//        file.write(Bytes.toBytes("But there are "+ nullPoint + " lines have format mistake. \n"));
+//        file.close();
+        System.out.println("Import data successfully!");
+    }
 
 
 
