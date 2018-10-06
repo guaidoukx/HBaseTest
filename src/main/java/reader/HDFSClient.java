@@ -45,5 +45,10 @@ public class HDFSClient {
         return toReturn;
     }
 
+    public void ABC(String filePath) throws IOException {
+        FSDataInputStream fsDataInputStream = fileSystem.open(new Path(filePath));
+//        fsDataInputStream.
+    }
+
 
 }
